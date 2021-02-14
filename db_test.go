@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	"testing"
+
+	_ "github.com/machine-w/tdengine-go-driver-restful/taosSqlRestful"
 )
 
 // func TestConn(t *testing.T) {
@@ -35,16 +37,16 @@ func TestDb(t *testing.T) {
 	}
 }
 
-func Example() {
-	db, err := sql.Open("taossqlrestful", "mydb://dalong@127.0.0.1/demoapp")
-	if err != nil {
-		log.Fatalf("some error %s", err.Error())
-	}
-	rows, err := db.Query("select * from demoapp")
-	if err != nil {
-		log.Println("some wrong for query", err.Error())
-	}
-	for rows.Next() {
-		rows.Scan()
-	}
-}
+// func Example() {
+// 	db, err := sql.Open("taossqlrestful", "mydb://dalong@127.0.0.1/demoapp")
+// 	if err != nil {
+// 		log.Fatalf("some error %s", err.Error())
+// 	}
+// 	rows, err := db.Query("select * from demoapp")
+// 	if err != nil {
+// 		log.Println("some wrong for query", err.Error())
+// 	}
+// 	for rows.Next() {
+// 		rows.Scan()
+// 	}
+// }
