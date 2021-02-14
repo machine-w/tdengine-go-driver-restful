@@ -1,6 +1,7 @@
 package taossqlrestful
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"log"
@@ -17,6 +18,12 @@ func init() {
 
 // Open for implement driver interface
 func (driver *restfulDriver) Open(name string) (driver.Conn, error) {
-	log.Println("exec open driver")
-	return &Conn{}, nil
+	cfg, err := parseDSN(name)
+	if err != nil {
+		return nil, err
+	}
+	c := &connector{
+		cfg: cfg,
+	}
+	return c.Connect(context.Background())
 }

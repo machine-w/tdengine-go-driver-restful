@@ -6,46 +6,131 @@ import (
 )
 
 // RowS  RowS implemmet for driver.Rows
-type RowS struct {
-	Size int64
+// type RowS struct {
+// 	Size int64
+// }
+
+type taosSqlField struct {
+	tableName string
+	name      string
+	length    uint32
+	flags     fieldFlag // indicate whether this field can is null
+	fieldType fieldType
+	decimals  byte
+	charSet   uint8
 }
 
-// Columns returns the names of the columns. The number of
-// columns of the result is inferred from the length of the
-// slice. If a particular column name isn't known, an empty
-// string should be returned for that entry.
-func (r *RowS) Columns() []string {
-	return []string{
-		"name",
-		"age",
-		"version",
+type resultSet struct {
+	columns     []taosSqlField
+	columnNames []string
+	done        bool
+	index       int64
+}
+
+type taosSqlRows struct {
+	mc *taosConn
+	rs resultSet
+}
+
+// type binaryRows struct {
+// 	taosSqlRows
+// }
+
+// type textRows struct {
+// 	taosSqlRows
+// }
+
+func (rows *taosSqlRows) Columns() []string {
+	if rows.rs.columnNames != nil {
+		return rows.rs.columnNames
 	}
+
+	columns := make([]string, len(rows.rs.columns))
+	if rows.mc != nil && rows.mc.cfg.columnsWithAlias {
+		for i := range columns {
+			if tableName := rows.rs.columns[i].tableName; len(tableName) > 0 {
+				columns[i] = tableName + "." + rows.rs.columns[i].name
+			} else {
+				columns[i] = rows.rs.columns[i].name
+			}
+		}
+	} else {
+		for i := range columns {
+			columns[i] = rows.rs.columns[i].name
+		}
+	}
+
+	rows.rs.columnNames = columns
+
+	return columns
 }
 
 // Close closes the rows iterator.
-func (r *RowS) Close() error {
+func (rows *taosSqlRows) Close() error {
+	if rows.mc != nil {
+		if rows.mc.result != nil {
+			rows.mc.result = nil
+		}
+		rows.mc = nil
+	}
 	return nil
 }
 
-// Next is called to populate the next row of data into
-// the provided slice. The provided slice will be the same
-// size as the Columns() are wide.
-//
-// Next should return io.EOF when there are no more rows.
-//
-// The dest should not be written to outside of Next. Care
-// should be taken when closing Rows not to modify
-// a buffer held in dest.
-func (r *RowS) Next(dest []driver.Value) error {
-	if r.Size == 0 {
-		return io.EOF
+// Next is
+func (rows *taosSqlRows) Next(dest []driver.Value) error {
+	if mc := rows.mc; mc != nil {
+		// Fetch next row from stream
+		return rows.readRow(dest)
 	}
-	name := "dalong"
-	age := 333
-	version := "v1"
-	dest[0] = name
-	dest[1] = age
-	dest[2] = version
-	r.Size--
-	return nil
+	return io.EOF
+}
+
+func (rows *taosSqlRows) HasNextResultSet() (b bool) {
+	if rows.mc == nil {
+		return false
+	}
+	return rows.mc.status&statusMoreResultsExists != 0
+}
+
+func (rows *taosSqlRows) nextResultSet() (int, error) {
+	if rows.mc == nil {
+		return 0, io.EOF
+	}
+
+	// Remove unread packets from stream
+	if !rows.rs.done {
+		rows.rs.done = true
+	}
+
+	if !rows.HasNextResultSet() {
+		rows.mc = nil
+		return 0, io.EOF
+	}
+	rows.rs = resultSet{}
+	return 0, nil
+}
+
+func (rows *taosSqlRows) nextNotEmptyResultSet() (int, error) {
+	for {
+		resLen, err := rows.nextResultSet()
+		if err != nil {
+			return 0, err
+		}
+
+		if resLen > 0 {
+			return resLen, nil
+		}
+
+		rows.rs.done = true
+	}
+}
+
+func (rows *taosSqlRows) NextResultSet() error {
+	resLen, err := rows.nextNotEmptyResultSet()
+	if err != nil {
+		return err
+	}
+
+	rows.rs.columns, err = rows.mc.readColumns(resLen)
+	return err
 }

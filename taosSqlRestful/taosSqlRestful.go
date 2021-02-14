@@ -15,65 +15,84 @@ type TaosResq struct {
 	Status string          `json:"status"`
 	Head   []string        `json:"head"`
 	Data   [][]interface{} `json:"data"`
-	Rows   int64           `json:"rows"`
+	Rows   int             `json:"rows"`
 	Code   int             `json:"code"`
 	Desc   string          `json:"desc"`
 }
 
 // TaosConnect is
-func (mc *Conn) TaosConnect(ip, user, pass, db string, port int) (taos string, err error) {
+func (mc *taosConn) taosConnect(ip, user, pass, db string, port int) (taos string, err error) {
 	b := []byte(fmt.Sprintf("%s:%s", user, pass))
-	body := strings.NewReader("SELECT CLIENT_VERSION()")
-	sEnc := base64.StdEncoding.EncodeToString(b)
-	fmt.Printf("enc=[%s]\n", sEnc)
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/rest/sql", ip, port), body)
-	req.Header.Add("Authorization", "Basic "+sEnc)
+	sqlStr := strings.NewReader("SELECT CLIENT_VERSION()")
+	mc.token = base64.StdEncoding.EncodeToString(b)
+	mc.reqUrl = fmt.Sprintf("http://%s:%d/rest/sqlt", ip, port)
+	req, err := http.NewRequest("POST", mc.reqUrl, sqlStr)
+	req.Header.Add("Authorization", "Basic "+mc.token)
 	clt := http.Client{}
 	resp, err := clt.Do(req)
 	if err != nil {
-		return "", errors.New("taos_connect() fail! ")
+		return "", errors.New("taos restful api fail! ")
 	}
+	defer resp.Body.Close()
 	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("%s", err)
+		return "", err
 	}
 	taosResq := new(TaosResq)
 	jsonErr := json.Unmarshal(content, &taosResq)
 	if jsonErr != nil {
-		fmt.Printf("%s", jsonErr)
+		return "", jsonErr
 	}
-	fmt.Println(taosResq.Data)
-
-	return db, nil
+	// fmt.Println(taosResq.Status)
+	if taosResq.Status != "succ" {
+		return "", errors.New(taosResq.Desc)
+	}
+	mc.db = db
+	// mc.result = taosResq
+	mc.dbVersion = taosResq.Data[0][0].(string)
+	return "succ", nil
 }
 
-// func (mc *Conn) taosQuery(sqlstr string) (int, error) {
+func (mc *taosConn) taosQuery(sqlstr string) (int, error) {
+	mc.mu.Lock()
+	clt := http.Client{}
+	req1, err := http.NewRequest("POST", mc.reqUrl, strings.NewReader("use "+mc.db))
+	req1.Header.Add("Authorization", "Basic "+mc.token)
+	resp, err := clt.Do(req1)
+	if err != nil {
+		return 0, errors.New("taos restful api fail! ")
+	}
+	sqlStr := strings.NewReader(sqlstr)
+	req, err := http.NewRequest("POST", mc.reqUrl, sqlStr)
+	req.Header.Add("Authorization", "Basic "+mc.token)
+	resp, err = clt.Do(req)
+	if err != nil {
+		return 0, errors.New("taos restful api fail! ")
+	}
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+	taosResq := new(TaosResq)
+	jsonErr := json.Unmarshal(content, &taosResq)
+	if jsonErr != nil {
+		return 0, jsonErr
+	}
+	if taosResq.Status != "succ" {
+		return 0, errors.New(taosResq.Desc)
+	}
+	mc.result = taosResq
+	numFields := len(taosResq.Head)
+	if numFields == 1 && taosResq.Head[0] == "affected_rows" { // there are no select and show kinds of commands
+		mc.affectedRows = taosResq.Data[0][0].(int)
+		mc.insertId = 0
+		numFields = 0
+	}
+	defer resp.Body.Close()
+	mc.mu.Unlock()
+	return numFields, nil
+}
 
-// 	csqlstr := C.CString(sqlstr)
-// 	defer C.free(unsafe.Pointer(csqlstr))
-// 	if mc.result != nil {
-// 		C.taos_free_result(mc.result)
-// 		mc.result = nil
-// 	}
-// 	mc.result = unsafe.Pointer(C.taos_query(mc.taos, csqlstr))
-// 	//mc.result = unsafe.Pointer(C.taos_query_c(mc.taos, csqlstr.Str, C.uint32_t(csqlstr.Len)))
-// 	code := C.taos_errno(mc.result)
-// 	if 0 != code {
-// 		errStr := C.GoString(C.taos_errstr(mc.result))
-// 		mc.taos_error()
-// 		return 0, errors.New(errStr)
-// 	}
-
-// 	// read result and save into mc struct
-// 	num_fields := int(C.taos_field_count(mc.result))
-// 	if 0 == num_fields { // there are no select and show kinds of commands
-// 		mc.affectedRows = int(C.taos_affected_rows(mc.result))
-// 		mc.insertId = 0
-// 	}
-
-// 	return num_fields, nil
-// }
-
-// func (mc *Conn) taos_close() {
-// 	mc.taos = nil
-// }
+func (mc *taosConn) taos_close() {
+	mc.taos = ""
+}
