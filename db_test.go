@@ -37,6 +37,30 @@ func TestDb(t *testing.T) {
 	}
 }
 
+func TestExec(t *testing.T) {
+	db, err := sql.Open("taossqlrestful", "root:msl110918@/http(121.36.56.117:6041)/dianli1")
+	if err != nil {
+		t.Errorf("some error %s", err.Error())
+	}
+	stmt, err := db.Prepare("insert into node_5(ts,wdtc3,wdtc4) values(?,?)")
+	if err != nil {
+		log.Println(err)
+	}
+	rs, err := stmt.Exec("2020-02-10 00:00:00", 11, 12)
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(rs)
+	//我们可以获得插入的id
+	// id, err := rs.LastInsertId()
+	//可以获得影响行数
+	// _, err = rs.RowsAffected()
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+	// log.Println(affect)
+}
+
 // func Example() {
 // 	db, err := sql.Open("taossqlrestful", "mydb://dalong@127.0.0.1/demoapp")
 // 	if err != nil {
