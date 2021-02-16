@@ -188,13 +188,13 @@ func (mc *taosConn) interpolateParams(query string, args []driver.Value) (string
 				buf = append(buf, '\'')
 			}
 		case string:
-			//buf = append(buf, '\'')
+			buf = append(buf, '\'')
 			if mc.status&statusNoBackslashEscapes == 0 {
 				buf = escapeStringBackslash(buf, v)
 			} else {
 				buf = escapeStringQuotes(buf, v)
 			}
-			//buf = append(buf, '\'')
+			buf = append(buf, '\'')
 		default:
 			return "", driver.ErrSkip
 		}

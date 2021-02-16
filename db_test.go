@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"testing"
+	"time"
 
 	_ "github.com/machine-w/tdengine-go-driver-restful/taosSqlRestful"
 )
@@ -42,23 +43,28 @@ func TestExec(t *testing.T) {
 	if err != nil {
 		t.Errorf("some error %s", err.Error())
 	}
-	stmt, err := db.Prepare("insert into node_5(ts,wdtc3,wdtc4) values(?,?)")
+	stmt, err := db.Prepare("insert into node_5(ts,wdtc3,wdtc4) values(?,?,?)")
 	if err != nil {
 		log.Println(err)
 	}
-	rs, err := stmt.Exec("2020-02-10 00:00:00", 11, 12)
+	// rs, err := stmt.Exec("2020-02-14 00:00:00", 11, 12)
+	rs, err := stmt.Exec(time.Now(), 11, 12)
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println(rs)
+	// log.Println(rs)
 	//我们可以获得插入的id
-	// id, err := rs.LastInsertId()
+	id, err := rs.LastInsertId()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(id)
 	//可以获得影响行数
-	// _, err = rs.RowsAffected()
-	// if err != nil {
-	// 	log.Println(err)
-	// }
-	// log.Println(affect)
+	affect, err := rs.RowsAffected()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(affect)
 }
 
 // func Example() {

@@ -55,6 +55,7 @@ func (mc *taosConn) taosConnect(ip, user, pass, db string, port int) (taos strin
 
 func (mc *taosConn) taosQuery(sqlstr string) (int, error) {
 	mc.mu.Lock()
+	// fmt.Println(sqlstr)
 	clt := http.Client{}
 	req1, err := http.NewRequest("POST", mc.reqUrl, strings.NewReader("use "+mc.db))
 	req1.Header.Add("Authorization", "Basic "+mc.token)
@@ -84,7 +85,7 @@ func (mc *taosConn) taosQuery(sqlstr string) (int, error) {
 	mc.result = taosResq
 	numFields := len(taosResq.Head)
 	if numFields == 1 && taosResq.Head[0] == "affected_rows" { // there are no select and show kinds of commands
-		mc.affectedRows = taosResq.Data[0][0].(int)
+		mc.affectedRows = int(taosResq.Data[0][0].(float64))
 		mc.insertId = 0
 		numFields = 0
 	}
