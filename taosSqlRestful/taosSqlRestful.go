@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -75,6 +76,7 @@ func (mc *taosConn) taosQuery(sqlstr string) (int, error) {
 		return 0, err
 	}
 	taosResq := new(TaosResq)
+	log.Println(content)
 	jsonErr := json.Unmarshal(content, &taosResq)
 	if jsonErr != nil {
 		return 0, jsonErr
