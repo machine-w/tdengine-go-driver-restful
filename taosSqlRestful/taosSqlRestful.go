@@ -76,7 +76,7 @@ func (mc *taosConn) taosQuery(sqlstr string) (int, error) {
 		return 0, err
 	}
 	taosResq := new(TaosResq)
-	log.Println(content)
+	log.Println(string(content))
 	jsonErr := json.Unmarshal(content, &taosResq)
 	if jsonErr != nil {
 		return 0, jsonErr

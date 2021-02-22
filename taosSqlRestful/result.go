@@ -50,30 +50,31 @@ func (rows *taosSqlRows) readRow(dest []driver.Value) error {
 	//TODO: 字段中有其他类型的字段需要获取字段类型进行匹配
 	for i := range dest {
 		inter := mc.result.Data[rows.rs.index][i]
-		if i == 0 {
-			if mc.cfg.parseTime == true {
-				timestamp := int64(inter.(float64))
-				dest[i] = timestampConvertToString(timestamp, 0)
-			} else {
-				dest[i] = int64(inter.(float64))
-			}
-		} else {
-			switch inter.(type) {
-			case string:
-				dest[i] = inter.(string)
-				break
-			case int:
-				dest[i] = inter.(int64)
-				break
-			case float64:
-				dest[i] = inter.(float64)
-				break
-			default:
-				// fmt.Println("default fieldType: set dest[] to nil")
-				dest[i] = nil
-				break
-			}
+		// TODO:取第一个字段转换有问题
+		// if i == 0 {
+		// 	if mc.cfg.parseTime == true {
+		// 		timestamp := int64(inter.(float64))
+		// 		dest[i] = timestampConvertToString(timestamp, 0)
+		// 	} else {
+		// 		dest[i] = int64(inter.(float64))
+		// 	}
+		// } else {
+		switch inter.(type) {
+		case string:
+			dest[i] = inter.(string)
+			break
+		case int:
+			dest[i] = inter.(int64)
+			break
+		case float64:
+			dest[i] = inter.(float64)
+			break
+		default:
+			// fmt.Println("default fieldType: set dest[] to nil")
+			dest[i] = nil
+			break
 		}
+		// }
 
 	}
 	rows.rs.index++
