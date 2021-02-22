@@ -41,7 +41,7 @@ func (rows *taosSqlRows) readRow(dest []driver.Value) error {
 		return errors.New("result is nil! ")
 	}
 
-	if rows.rs.index >= int64(mc.result.Rows)-1 {
+	if rows.rs.index >= int64(mc.result.Rows) {
 		rows.rs.done = true
 		mc.result = nil
 		rows.mc = nil
