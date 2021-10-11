@@ -22,7 +22,7 @@ type taosConn struct {
 	token        string
 	db           string
 	dbVersion    string
-	result       *TaosResq
+	result       *TaosResp
 	affectedRows int
 	insertId     int
 	cfg          *config
